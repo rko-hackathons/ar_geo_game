@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=windows-1252">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>AR Game for two players</title>
+    <style>
+      body {
+        margin: 0px;
+        overflow: hidden;
+      }
+      a, a:link, a:visited, a:hover, a:active
+      {
+        text-decoration: inherit;
+        font-family: inherit;
+        font-size: inherit;
+        background-color: inherit;
+        color: inherit;
+      }
+      #container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #000000;
+      }
+
+      #container:-webkit-full-screen { width: 100% }
+      #container:-moz-full-screen { width: 100% }
+      #container:-ms-full-screen { width: 100% }
+      #container:-o-full-screen { width: 100% }
+      #container:full-screen { width: 100% }
+
+      #webgl {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+      }
+      video {
+        position: absolute;
+        visibility: hidden;
+      }
+      #rightcam {
+        position: absolute;
+      }
+      #toppanel {
+        position: absolute;
+        top: 0;
+        left: 0;
+        background-color: #222222;
+      }
+      #bottompanel {
+        position: absolute;
+        left: 0;
+        background-color: #222222;
+      }
+      #toastright {
+        position: absolute;
+        padding-left: 10px;
+        padding-top: 10px;
+        background-color: #222222;
+        overflow: 'hidden';
+        visibility: hidden;
+        opacity: 0.6;
+        filter: alpha(opacity=60);
+        color: #00dddd;
+        text-align: left;
+        /* font-family: "Arial", "Sans-serif"; */
+        font-family:  "Courier New", Courier, monospace;
+        font-weight: bold;
+        font-size: 12px;
+      }
+      #inforight {
+        position: absolute;
+        width: 100px;
+        height: 20px;
+        background-color: transparent;
+        overflow: visible;
+        visibility: hidden;
+        opacity: 0.3;
+        filter: alpha(opacity=30);
+        color: #00dddd;
+        text-align: center;
+        // font-family:  "Courier New", Courier, monospace;
+        font-family: "Arial", "Sans-serif";
+        font-weight: bold;
+        font-size: 12px;
+        whiteSpace: nowrap;
+      }
+    </style>
+</head>
+  <body>
+  <div id="container">
+    <video id="video" style="visibility: hidden;" autoplay="autoplay" height="800" width="1217"></video>
+    <canvas style="left: 0px; top: 25px; width: 1217px; height: 800px;" id="rightcam" width="1217" height="800"></canvas>
+    <div style="left: 0px; top: 25px; width: 1217px; height: 800px;" id="webgl"><canvas style="width: 1217px; height: 800px;" height="800" width="1217"></canvas></div>
+    <div style="top: 800px; width: 1217px; height: 25px;" id="bottompanel"></div>
+    <div style="left: 54px; top: 75px; width: 243px; height: 152px; visibility: hidden;" id="toastright">Please wait while textures load 2</div>
+    <div style="left: 45px; top: 269px; visibility: visible;" id="inforight">The Sun</div>
+  </div>
+
+  <script>
+    /*
+      Thanks Mr.doob for Three.js.
+      Thanks http://planetpixelemporium.com/ for textures.
+      Thanks Google for Google Cardboard
+    */
+  </script>
+  <script src="complexity/three.js"></script>
+<!--
+  <script src="complexity/StereoEffect.js"></script>
+-->
+  <script src="complexity/DeviceOrientationControls.js"></script>
+  <script src="complexity/navigateControl.js"></script>
+  <script src="complexity/threex.md2character.js"></script>
+  <script src="complexity/threex.md2charactercontrols.js"></script>
+  <script src="complexity/threex.md2characterratmahatta.js"></script>
+<!--
+  <script src="complexity/package.require.js"></script>
+-->
+  <script src="complexity/tween.js"></script>
+  
+  <script>
+    /*
+      complexity.zone
+      Tim Samshuijzen
+      2014
+      
+    */
+    var camera, scene, renderer, raycaster;
+    var effect, controls;
+    var player1, player2;
+
+    var container, divwebgl, rightcam, toppanel, bottompanel, toastright, inforight ;
+
+    var screenWidth;
+    var screenHeight;
+    var screenHalfWidth;
+    var screenHalfHeight;
+    var verticalMargin;
+    var cameraImage;
+    var cameraImageContext;
+
+    var rightCamCanvas;
+    var rightCamContext;
+    var video;
+
+    var videoPlaying = false;
+    var fullScreenRequested = false;
+
+    //var isMobile = ( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) ? true : false;
+    var isMobile = true;
+    
+    // Set up solar system.
+
+    var lEarthDaysPerYear = 365.25;
+    var AU = 26000; // 1 Astronomical Unit (Average distance between Sun and Earth) in 3d coordinate system.
+
+    var surfaceGraph = null;
+    var sunMesh = null;
+    
+    var focusableObjects = [];
+    var focusPlanet = null;
+    var infoFDistance = 14; 
+    
+    var clock = new THREE.Clock();
+
+    var lastMs = Date.now();
+    var toastCountDownMs = 0;
+    var toastQueue = [];
+    
+    var setOrientationControlsDone = false;
+    
+    init();
+    render();
+
+    function init() {
+    
+      raycaster = new THREE.Raycaster();
+      
+      renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
+      renderer.setClearColor( 0x000000, 0 );
+      divwebgl = document.getElementById('webgl');
+      divwebgl.appendChild(renderer.domElement);
+      
+      container = document.getElementById('container');
+      rightcam = document.getElementById('rightcam');
+      toppanel = document.getElementById('toppanel');
+      bottompanel = document.getElementById('bottompanel');
+      toastright = document.getElementById('toastright');
+      inforight = document.getElementById('inforight');
+      
+      rightCamCanvas = document.getElementById("rightcam");
+      rightCamContext = rightCamCanvas.getContext("2d");
+      video = document.getElementById("video");
+
+      cameraImage = document.createElement('canvas');
+      cameraImage.setAttribute("width", "640");
+      cameraImage.setAttribute("height", "480");
+      cameraImage.width = 640;
+      cameraImage.height = 480;
+      cameraImageContext = cameraImage.getContext("2d");
+      
+      //effect = new THREE.StereoEffect(renderer);
+
+      scene = new THREE.Scene();
+
+      camera = new THREE.PerspectiveCamera(40, 1, 10, 10000000);
+      camera.position.set(0, 1850, 0);
+      camera.up = new THREE.Vector3(0, 1, 0);
+      scene.add(camera);
+
+      // Place us somewhere between Mars and Jupiter, from above
+      var orrerySunPosition = {
+        x: 0, // forward
+        y: -20000, // up. 
+        z: 60000 // right
+      };
+      
+      var lCenter =  new THREE.Vector3(orrerySunPosition.x, orrerySunPosition.y, orrerySunPosition.z);
+      // Don't orbit around Sun. Look around from camera's position instead.
+      lCenter.set(
+        camera.position.x,
+        camera.position.y - 0.2,
+        camera.position.z + 0.6
+      );
+      // Default PC controls when no deviceorientation.
+      controls = new THREE.navigateControl(camera, renderer.domElement, lCenter);
+      
+      function setOrientationControls(e) {
+        if (!e.alpha) {
+          return;
+        }
+        if (!setOrientationControlsDone) {
+          setOrientationControlsDone = true;
+
+          camera.position.set(0, 1850, 0);
+
+          controls = new THREE.DeviceOrientationControls(camera, true);
+          controls.connect();
+          controls.update();
+
+          container.addEventListener('click', function() { fullscreen(container); fullScreenRequested = true; }, false);
+
+          window.removeEventListener('deviceorientation', setOrientationControls);
+        }
+      }
+      if (window.DeviceOrientationEvent) {
+        window.addEventListener('deviceorientation', setOrientationControls, true);
+      }
+
+      var light;
+
+      light = new THREE.AmbientLight( 0x444444 );
+      scene.add(light);
+
+      light = new THREE.PointLight(0xffffff, 0.90);
+      light.position.set(orrerySunPosition.x, orrerySunPosition.y, orrerySunPosition.z);
+      scene.add(light);
+
+      var sunRadius = 6000;
+      var sunGeometry = new THREE.SphereGeometry(sunRadius, 48, 48);
+      var sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      sunMaterial.map = THREE.ImageUtils.loadTexture('images/texture_sun.jpg');
+      sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
+      sunMesh.position.x = orrerySunPosition.x; // forward
+      sunMesh.position.y = orrerySunPosition.y; // up
+      sunMesh.position.z = orrerySunPosition.z; // right
+      scene.add(sunMesh);
+      sunMesh.solarSystemData = {
+        name: 'The Sun',
+        radius: sunRadius
+      };
+      focusableObjects.push(sunMesh);
+
+	// add players
+	var player1 = new THREEx.MD2CharacterRatmahatta();
+	player1.setSkinName("ctf_b"); // blue
+	player1.setWeaponName("none"); // none
+	player1.setAnimationName("stand"); // stand
+
+	var player2 = new THREEx.MD2CharacterRatmahatta();
+	player2.setSkinName("ctf_r"); // red 
+	player2.setWeaponName("none"); // none
+	player2.setAnimationName("stand"); // stand
+
+	scene.add(player1.character.object3d);
+	scene.add(player2.character.object3d);
+      
+      window.addEventListener('resize', resize, false);
+      resize();
+    }
+
+    function resize() {
+      screenWidth = container.offsetWidth; //window.innerWidth;
+      screenHeight = container.offsetHeight; //window.innerHeight;
+      screenHalfWidth = screenWidth;
+      screenHalfHeight = screenHeight;
+      var horizontalMargin = 0;
+      // adjust margin so that we have a near 4:3 ratio.
+      verticalMargin = (((screenHeight - (screenHalfWidth / (4/3))) / 2) * 0.5) | 0;
+
+      camera.aspect = screenHalfWidth / (screenHeight - (2 * verticalMargin));
+      camera.updateProjectionMatrix();
+
+      renderer.setSize(screenWidth, (screenHeight - (2 * verticalMargin))); // the total space for the viewport
+      //effect.setSizeSingleView(screenHalfWidth, (screenHeight - (2 * verticalMargin)));
+
+      var cameraImageWidth = 800; //(screenHalfWidth - (2 * horizontalMargin));
+      var cameraImageHeight = 600; //(screenHeight - (2 * verticalMargin));
+      
+      cameraImage.width = cameraImageWidth;
+      cameraImage.height = cameraImageHeight;
+      cameraImage.setAttribute("width", '' + cameraImageWidth);
+      cameraImage.setAttribute("height", '' + cameraImageHeight);
+      cameraImage.style.width = cameraImageWidth + 'px';
+      cameraImage.style.height = cameraImageHeight + 'px';
+      
+      //rightcam.style.left = (screenHalfWidth + horizontalMargin) + 'px';
+      rightcam.style.left = 1 + 'px';
+      rightcam.style.top = verticalMargin + 'px';
+      rightcam.width = (screenHalfWidth - (2 * horizontalMargin));
+      rightcam.height = (screenHeight - (2 * verticalMargin));
+      rightcam.style.width = (screenHalfWidth - (2 * horizontalMargin)) + 'px';
+      rightcam.style.height = (screenHeight - (2 * verticalMargin)) + 'px';
+      
+      divwebgl.style.left = 0 + 'px';
+      divwebgl.style.top = verticalMargin + 'px';
+      divwebgl.style.width = screenWidth + 'px';
+      divwebgl.style.height = (screenHeight - (2 * verticalMargin)) + 'px';
+      
+      //toppanel.style.width = screenWidth + 'px';
+      //toppanel.style.height = verticalMargin + 'px';
+
+      bottompanel.style.top = (screenHeight - verticalMargin) + 'px';
+      bottompanel.style.width = screenWidth + 'px';
+      bottompanel.style.height = verticalMargin + 'px';
+      
+      var lToastViewLeft = ((screenHalfWidth * 1) / 10);
+      var lToastViewTop = (((screenHeight - (2 * verticalMargin)) * 1) / 10);
+      var lToastViewWidth = ((screenHalfWidth * 4) / 10);
+      var lToastViewHeight = (((screenHeight - (2 * verticalMargin)) * 3) / 10);
+
+      toastright.style.left = (screenHalfWidth + ((lToastViewLeft - 14) | 0)) + 'px'; // -14 for making toast appear near.
+      toastright.style.top = (verticalMargin + (lToastViewTop | 0)) + 'px';
+      toastright.style.width = (lToastViewWidth | 0) + 'px';
+      toastright.style.height = (lToastViewHeight | 0) + 'px';
+      if (isMobile) {
+        toastright.style.fontSize = '11px';
+      }
+      
+      inforight.style.left = (screenHalfWidth + ((((screenHalfWidth / 2) | 0) - 50) - infoFDistance)) + 'px';
+      inforight.style.top = ((verticalMargin + (((screenHeight - (2 * verticalMargin)) / 2) | 0)) - 10) + 'px';
+
+}
+    function toast(toastMessage) {
+      toastQueue.push(toastMessage);
+    }
+    
+    function toastRun(deltaMS) {
+      if (toastCountDownMs > 0) {
+        if (deltaMS >= toastCountDownMs) {
+          toastCountDownMs = 0;
+          if (toastQueue.length == 0) {
+            toastright.style.visibility = 'hidden';
+          }
+        } else {
+          toastCountDownMs -= deltaMS;
+        }
+      } else if (toastQueue.length > 0) {
+        var toastMessage = toastQueue.splice(0, 1);
+        if (toastMessage || (toastMessage != '')) {
+          toastright.innerHTML = toastMessage;
+          toastright.style.visibility = 'visible';
+          toastCountDownMs = 3000;
+        }
+      }
+    }
+
+    function infoShow(infoMessage) {
+      inforight.style.left = (screenHalfWidth + ((((screenHalfWidth / 2) | 0) - 50) - infoFDistance)) + 'px';
+      inforight.innerHTML = infoMessage;
+      inforight.style.visibility = 'visible';
+    }
+
+    function infoHide() {
+      inforight.style.visibility = 'hidden';
+    }
+
+    var renderState = 0;
+    var planetProjectVector = new THREE.Vector3();
+    var screenCenterVector = new THREE.Vector2(0, 0);
+    
+    function render() {
+      requestAnimationFrame(render);
+
+      camera.updateProjectionMatrix();
+      controls.update(clock.getDelta());
+
+      //effect.render(scene, camera);
+      renderer.render(scene, camera);
+      
+      var nowMs = Date.now();
+      var deltaMs = (nowMs - lastMs);
+      lastMs = nowMs;
+
+      toastRun(deltaMs);
+      
+      var lTimeSec = clock.getElapsedTime();
+
+      sunMesh.rotation.y += 0.003;
+
+      var lEarthSunPeriodSec = 20;
+      
+      var lEarthOrbitNorm = (lTimeSec / lEarthSunPeriodSec);
+      
+      renderState++;
+      if (renderState == 1) {
+        // only determine focus 50% of time
+        var focusPlanetPrev = focusPlanet;
+        var focusPlanetNew = null;
+        var useProjectMethod = true;
+        if (useProjectMethod) {
+		 // project method
+        } else { // unproject method
+          var vector = new THREE.Vector3();
+          var focusX = 0.5; // center of screen
+          var focusY = 0.5; // center of screen
+          vector.set( ( focusX ) * 2 - 1, - ( focusY ) * 2 + 1, 0.5 );
+          vector.unproject( camera );
+          raycaster.ray.set( camera.position, vector.sub( camera.position ).normalize() );
+          var intersects = raycaster.intersectObjects( focusableObjects );
+          if ( intersects.length > 0 ) {
+            focusPlanetNew = intersects[0].object;
+          }
+        }
+        if (focusPlanetNew != null) {
+          focusPlanet = focusPlanetNew;
+          if (focusPlanet != focusPlanetPrev) {
+            infoFDistance = (1000000 / (camera.position.distanceTo( focusPlanet.position ) - focusPlanet.solarSystemData.radius)) | 0;
+            infoShow(focusPlanet.solarSystemData.name);
+          }
+        } else {
+          focusPlanet = null;
+          if (focusPlanet != focusPlanetPrev) {
+            infoHide();
+          }
+        }
+      }
+      else if (renderState > 1) {
+        renderState = 0;
+      }
+
+	//player1.update(delta);
+	//player2.update(delta);
+      camCapture();
+
+      TWEEN.update();
+    }
+
+    function fullscreen(el) {
+      if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement ) {
+        if (el.requestFullscreen) {
+          el.requestFullscreen();
+        } else if (el.msRequestFullscreen) {
+          el.msRequestFullscreen();
+        } else if (el.mozRequestFullScreen) {
+          el.mozRequestFullScreen();
+        } else if (el.webkitRequestFullscreen) {
+          el.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+        }
+      } else {
+        var toggle = false;
+        if (toggle) {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+        }
+      }
+    }
+
+    var camCaptureState = 0;
+    function camCapture() {
+      if (videoPlaying) {
+        cameraImageContext.drawImage(video, 0, 0, video.videoWidth, video.videoHeight, 0, 0, cameraImage.width, cameraImage.height);
+        rightCamContext.drawImage(cameraImage, 0, 0, cameraImage.width, cameraImage.height, 0, 0, rightcam.width, rightcam.height);
+      }
+    }
+      
+    // TODO: Better method for conditional sequential toasting.
+    
+    if (isMobile) {
+      toast('AR Game for two players'); 
+      toast('Get your smartphones ready');
+      toast('Accept camera permission for AR mode');
+    } else {
+      toast(
+        'AR Game for two players<br />\n' +
+        '<br />\n' +
+        'Open this page on your phone.'
+      ); 
+      toast(
+        'To use on your PC:<br />\n' +
+        '<br />' +
+        '<b><u>Controls</u></b><br />\n' +
+        'mouse drag: look around<br />\n' +
+        //'mouse wheel: zoom<br />\n' +
+        'cursor keys: move<br />\n' +
+        'R/F keys: up/down<br />\n'
+      ); 
+    }
+    
+    window.addEventListener("DOMContentLoaded", function() {
+	    var getUserMedia = navigator.getUserMedia ? function(a, b, c) { navigator.getUserMedia(a, b, c); } : (navigator.webkitGetUserMedia ? function(a, b, c) { navigator.webkitGetUserMedia(a, b, c); } : null);
+      if (getUserMedia == null) {
+	alert("getUserMedia == null");
+      }
+      if (getUserMedia != null) {
+        MediaStreamTrack.getSources(function(sourceInfos) {
+          var videoSource = null;
+          // Select the rear camera. We are assuming it is the last one.
+          // TODO: assumption is the mother of all...
+          for (var i = 0; i < sourceInfos.length; i++) {
+            var sourceInfo = sourceInfos[i];
+            //console.log('source: ', sourceInfo);
+            if (sourceInfo.kind === 'video') {
+              //console.log(sourceInfo.id, sourceInfo.label || 'camera');
+              videoSource = sourceInfo.id;
+              //break; // uncomment for selecting the first one.
+            }
+          }
+
+          if (videoSource != null)
+          {
+            getUserMedia.call(this,
+              { 
+                video: {
+                  optional: [
+                    { sourceId: videoSource },
+                    { minWidth: 640 },
+                    { maxWidth: 640 },
+                    { minHeight: 480 },
+                    { maxHeight: 480 }
+                  ]
+                },
+                //video: true, 
+                audio: false 
+              }, 
+              function(stream){
+                video.src = window.URL.createObjectURL(stream);
+                video.play();
+                
+                videoPlaying = true;
+                toast('Video setup ok');
+                if (isMobile) {
+                  if (!fullScreenRequested) {
+                    toast('Tap screen for full screen mode');
+                  }
+                }
+                toast('Please wait while textures load 3');
+                if (isMobile) {
+                  toast('Tip: increase your phone\'s display sleep timeout');
+                }
+              }, 
+              function(error) {
+                videoPlaying = false;
+                toast("Video capture disabled"); 
+                if (isMobile) {
+                  if (!fullScreenRequested) {
+                    toast('Tap screen for full screen mode');
+                  }
+                }
+                toast('Please wait while textures load 4');
+                if (isMobile) {
+                  toast('Tip: increase your phone\'s display sleep timeout');
+                }
+              }
+            );
+          } else {
+            toast("Video capture not available"); 
+            if (isMobile) {
+              if (!fullScreenRequested) {
+                toast('Tap screen for full screen mode');
+              }
+            }
+            toast('Please wait while textures load 5');
+            if (isMobile) {
+              toast('Tip: increase your phone\'s display sleep timeout');
+            }
+          }
+        });
+      } else {
+        toast("HTML5 video not supported"); 
+        if (isMobile) {
+          toast('Tap screen for full screen mode');
+        }
+        toast('Please wait while textures load 6');
+        if (isMobile) {
+          toast('Tip: increase your phone\'s display sleep timeout');
+        }
+      }
+
+    });
+  </script>
+</body></html>

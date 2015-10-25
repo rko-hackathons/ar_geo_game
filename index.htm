@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=windows-1252">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>complexity.zone - AR/VR Solar System for Google Cardboard</title>
+    <style>
+      body {
+        margin: 0px;
+        overflow: hidden;
+      }
+      a, a:link, a:visited, a:hover, a:active
+      {
+        text-decoration: inherit;
+        font-family: inherit;
+        font-size: inherit;
+        background-color: inherit;
+        color: inherit;
+      }
+      #container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #000000;
+      }
+
+      #container:-webkit-full-screen { width: 100% }
+      #container:-moz-full-screen { width: 100% }
+      #container:-ms-full-screen { width: 100% }
+      #container:-o-full-screen { width: 100% }
+      #container:full-screen { width: 100% }
+
+      #webgl {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+      }
+      video {
+        position: absolute;
+        visibility: hidden;
+      }
+      #leftcam {
+        position: absolute;
+      }
+      #rightcam {
+        position: absolute;
+      }
+      #toppanel {
+        position: absolute;
+        top: 0;
+        left: 0;
+        background-color: #222222;
+      }
+      #bottompanel {
+        position: absolute;
+        left: 0;
+        background-color: #222222;
+      }
+      #toastleft, #toastright {
+        position: absolute;
+        padding-left: 10px;
+        padding-top: 10px;
+        background-color: #222222;
+        overflow: 'hidden';
+        visibility: hidden;
+        opacity: 0.6;
+        filter: alpha(opacity=60);
+        color: #00dddd;
+        text-align: left;
+        /* font-family: "Arial", "Sans-serif"; */
+        font-family:  "Courier New", Courier, monospace;
+        font-weight: bold;
+        font-size: 12px;
+      }
+      #infoleft, #inforight {
+        position: absolute;
+        width: 100px;
+        height: 20px;
+        background-color: transparent;
+        overflow: visible;
+        visibility: hidden;
+        opacity: 0.3;
+        filter: alpha(opacity=30);
+        color: #00dddd;
+        text-align: center;
+        // font-family:  "Courier New", Courier, monospace;
+        font-family: "Arial", "Sans-serif";
+        font-weight: bold;
+        font-size: 12px;
+        whiteSpace: nowrap;
+      }
+      #complexityzonelinkleft, #complexityzonelinkright {
+        position: absolute;
+        width: 200px;
+        height: 40px;
+        background-color: transparent;
+        overflow: visible;
+        opacity: 0.25;
+        filter: alpha(opacity=25);
+        color: #00dddd;
+        text-align: center;
+        font-family: "Arial", "Sans-serif";
+        font-size: 12px;
+        whiteSpace: nowrap;
+      }
+    </style>
+    <link href="complexity/Content.css" type="text/css" rel="stylesheet">
+    <link href="complexity/socialwidgets.css" type="text/css" rel="stylesheet">
+</head>
+  <body>
+  <div id="container">
+    <video id="video" style="visibility: hidden;" autoplay="autoplay" height="600" width="800"></video>
+    <canvas style="left: 0px; top: 25px; width: 608px; height: 508px;" id="leftcam" width="608" height="508"></canvas>
+    <canvas style="left: 608px; top: 25px; width: 608px; height: 508px;" id="rightcam" width="608" height="508"></canvas>
+    <div style="left: 0px; top: 25px; width: 1217px; height: 508px;" id="webgl"><canvas style="width: 1217px; height: 508px;" height="508" width="1217"></canvas></div>
+    <div style="width: 1217px; height: 25px;" id="toppanel"></div>
+    <div style="top: 533px; width: 1217px; height: 25px;" id="bottompanel"></div>
+    <div id="toastleft" style="visibility: hidden; left: 74px; top: 75px; width: 243px; height: 152px;">Please wait while textures load 1</div>
+    <div style="left: 654px; top: 75px; width: 243px; height: 152px; visibility: hidden;" id="toastright">Please wait while textures load 2</div>
+    <div style="left: 271px; top: 269px; visibility: visible;" id="infoleft">The Sun</div>
+    <div style="left: 845px; top: 269px; visibility: visible;" id="inforight">The Sun</div>
+    <div style="left: 218px; top: 528px;" id="complexityzonelinkleft"><a href="http://complexity.zone/">complexity.zone</a></div>
+    <div style="left: 798px; top: 528px;" id="complexityzonelinkright"><a href="http://complexity.zone/">complexity.zone</a></div>
+    <div id="centerline" style="position: absolute; width: 3px; background-color: rgb(34, 34, 34); left: 607px; top: 25px; height: 508px;"></div>    
+    <div id="lefteyetopcorner" style="position: absolute; top: 25px; left: 508px; width: 100px; height: 100px; background-color: transparent; overflow: hidden;"> 
+      <div style="position: absolute; left: 0px; top: -100px; width: 100px; height: 100px; background-color: transparent; border-right: 100px solid #222222; border-top: 100px solid #222222; border-radius: 0 200px 0 0; "> 
+      </div>    
+    </div>
+    <div id="righteyetopcorner" style="position: absolute; top: 25px; left: 608px; width: 100px; height: 100px; background-color: transparent; overflow: hidden;"> 
+      <div style="position: absolute; left: -100px; top: -100px; width: 100px; height: 100px; background-color: transparent; border-left: 100px solid #222222; border-top: 100px solid #222222; border-radius: 200px 0 0 0; "> 
+      </div>    
+    </div>    
+    <div id="lefteyebottomcorner" style="position: absolute; top: 433px; left: 508px; width: 100px; height: 100px; background-color: transparent; overflow: hidden;"> 
+      <div style="position: absolute; left: 0px; top: 0px; width: 100px; height: 100px; background-color: transparent; border-right: 100px solid #222222; border-bottom: 100px solid #222222; border-radius: 0 0 200px 0; "> 
+      </div>    
+    </div>    
+    <div id="righteyebottomcorner" style="position: absolute; top: 433px; left: 608px; width: 100px; height: 100px; background-color: transparent; overflow: hidden;"> 
+      <div style="position: absolute; left: -100px; top: 0px; width: 100px; height: 100px; background-color: transparent; border-left: 100px solid #222222; border-bottom: 100px solid #222222; border-radius: 0 0 0 200px; "> 
+      </div>
+    </div>    
+  </div>
+
+  <script>
+    /*
+      Thanks Mr.doob for Three.js.
+      Thanks http://planetpixelemporium.com/ for textures.
+      Thanks Google for Google Cardboard
+    */
+  </script>
+  <script src="complexity/three.js"></script>
+  <script src="complexity/StereoEffect.js"></script>
+  <script src="complexity/DeviceOrientationControls.js"></script>
+  <script src="complexity/navigateControl.js"></script>
+  <script src="complexity/tween.js"></script>
+  
+  <script>
+    /*
+      complexity.zone
+      Tim Samshuijzen
+      2014
+      
+      Feel free to copy and refactor the code in any way, or use parts of it in your own experiment.
+      Suggestions for improvements? Feel free to e-mail me: timsamshuijzen@gmail.com
+      
+      The goal of this experiment? 
+        I wanted to create an AR (or some form of Mixed Reality) experience for Google Cardboard using Web technology only.
+      Why AR? 
+        I really like the concept of VR, very excited about it, but I also like the concept of AR and Mixed Reality.
+      Why Google Cardboard?
+        I like the idea of technology being available for everyone.
+      Why Web technology?
+        I really think this is the way to go.
+      
+    */
+    var camera, scene, renderer, raycaster;
+    var effect, controls;
+
+    var container, divwebgl, leftcam, rightcam, toppanel, bottompanel, toastleft, toastright, infoleft, inforight,  complexityzonelinkleft, complexityzonelinkright,
+        centerline, lefteyetopcorner, righteyetopcorner, lefteyebottomcorner, righteyebottomcorner;
+
+    var screenWidth;
+    var screenHeight;
+    var screenHalfWidth;
+    var screenHalfHeight;
+    var verticalMargin;
+    var cameraImage;
+    var cameraImageContext;
+
+    var leftCamCanvas;
+    var leftCamContext;
+    var rightCamCanvas;
+    var rightCamContext;
+    var video;
+
+    var videoPlaying = false;
+    var fullScreenRequested = false;
+
+    var isMobile = ( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) ? true : false;
+    
+    // Set up solar system.
+    // Note: Planet sizes are exaggerated in size, not proportional, and some periods (both orbital and rotational) have been slowed down whereas others are speeded up.
+
+    var lEarthDaysPerYear = 365.25;
+    var AU = 26000; // 1 Astronomical Unit (Average distance between Sun and Earth) in 3d coordinate system.
+    var planets = [
+      {
+        name: 'Mercury',
+        radius: 700, // actually 0.3829 Earth radii
+        solarDistanceAU: 0.387,
+        orbitalPeriodEY: 0.240846,
+        rotationPeriodEY: 58.646 / lEarthDaysPerYear,
+        texture: 'images/texture_mercury.jpg',
+        segments: 48,
+        mesh: null
+      },
+      {
+        name: 'Venus', //1800
+        radius: 1600, // actually 0.949 Earth radii
+        solarDistanceAU: 0.723,
+        orbitalPeriodEY: 0.615,
+        rotationPeriodEY: -244 / lEarthDaysPerYear,
+        texture: 'images/texture_venus_atmosphere.jpg',
+        segments: 48,
+        mesh: null
+      },
+      {
+        name: 'Earth',
+        radius: 1700,
+        solarDistanceAU: 1,
+        orbitalPeriodEY: 1,
+        rotationPeriodEY: (1 / lEarthDaysPerYear) * 30, //Too fast for comfortable viewing, 30 is slowdown factor
+        texture: 'images/texture_earth_clouds.jpg',
+        segments: 64,
+        mesh: null,
+        moons : [
+          {
+            name: 'Moon',
+            radius: 500, // actually 0.2724 Earth radii
+            distaneFromPlanetAU: 70 * (1 / 389),  // Too close to earth, 70 is exaggeration factor
+            orbitalPeriodEY: 0.0748,
+            rotationPeriodEY: 0.0748,
+            texture: 'images/texture_moon.jpg',
+            segments: 48,
+            mesh: null
+          }
+        ]
+      },
+      {
+        name: 'Mars',
+        radius: 900, // actually 0.532 Earth radii
+        solarDistanceAU: 1.38,
+        orbitalPeriodEY: 1.88,
+        rotationPeriodEY: (1.03 / lEarthDaysPerYear) * 15, //Too fast, 10 is slowdown factor
+        texture: 'images/texture_mars.jpg',
+        segments: 48,
+        mesh: null,
+        moons : [
+          {
+            name: 'Phobos',
+            radius: 120, // actually (22.2 / 2) km
+            distaneFromPlanetAU: 1200 * (9380 / 149597871),  // Too close, 1400 is exaggeration factor
+            orbitalPeriodEY: (0.31891023 / lEarthDaysPerYear) * 50, //Too fast, 50 is slowdown factor
+            rotationPeriodEY: (0.31891023 / lEarthDaysPerYear) * 50,
+            //texture: 'images/texture_moon.jpg',
+            segments: 32,
+            mesh: null
+          },
+          {
+            name: 'Deimos',
+            radius: 70, // actually (12.6 / 2) km
+            distaneFromPlanetAU: 1200 * (23460 / 149597871),  // Too close, 1400 is exaggeration factor
+            orbitalPeriodEY: (1.263 / lEarthDaysPerYear) * 50, //Too fast, 50 is slowdown factor
+            rotationPeriodEY: 0.01,
+            //texture: 'images/texture_moon.jpg',
+            segments: 16,
+            mesh: null
+          }
+        ]
+      },
+      {
+        name: 'Jupiter',
+        radius: 7500, // actually 11.21 Earth radii
+        solarDistanceAU: 4.95,
+        orbitalPeriodEY: 11.9,
+        rotationPeriodEY: (0.415 / lEarthDaysPerYear) * 100, //Too fast, 100 is slowdown factor
+        texture: 'images/texture_jupiter.jpg',
+        segments: 64,
+        mesh: null,
+        moons : [
+          {
+            name: 'Io',
+            radius: (3660 / 2) * 0.4,
+            distaneFromPlanetAU: (421700 / 149597871) * 140,  // Too close, 120 is exaggeration factor
+            orbitalPeriodEY: (1.7691 / lEarthDaysPerYear) * 20, //Too fast, 20 is slowdown factor
+            rotationPeriodEY: 0.2,
+            texture: 'images/texture_io.jpg',
+            segments: 32,
+            mesh: null
+          },
+          {
+            name: 'Europa',
+            radius: (3121.6 / 2) * 0.4,
+            distaneFromPlanetAU: (670900 / 149597871) * 140,  // Too close, 120 is exaggeration factor
+            orbitalPeriodEY: (3.551 / lEarthDaysPerYear) * 20, //Too fast, 20 is slowdown factor
+            rotationPeriodEY: 0.2,
+            texture: 'images/texture_europa.jpg',
+            segments: 32,
+            mesh: null
+          },
+          {
+            name: 'Ganymede',
+            radius: (5262.4 / 2) * 0.35,
+            distaneFromPlanetAU: (1070412 / 149597871) * 140,  // Too close, 120 is exaggeration factor
+            orbitalPeriodEY: (7.154 / lEarthDaysPerYear) * 20, //Too fast, 20 is slowdown factor
+            rotationPeriodEY: 0.2,
+            texture: 'images/texture_ganymede.jpg',
+            segments: 32,
+            mesh: null
+          },
+          {
+            name: 'Callisto',
+            radius: (4820.6 / 2) * 0.35,
+            distaneFromPlanetAU: (1882709 / 149597871) * 140,  // Too close, 120 is exaggeration factor
+            orbitalPeriodEY: (16.689 / lEarthDaysPerYear) * 20, //Too fast, 20 is slowdown factor
+            rotationPeriodEY: 0.2,
+            texture: 'images/texture_callisto.jpg',
+            segments: 32,
+            mesh: null
+          }
+        ]
+      },
+      {
+        name: 'Saturn',
+        radius: 7500, // actually 9.45 Earth radii
+        solarDistanceAU: 9.58,
+        orbitalPeriodEY: 29.4,
+        rotationPeriodEY: (0.445 / lEarthDaysPerYear) * 100, //Too fast, 100 is slowdown factor
+        texture: 'images/texture_saturn.jpg',
+        segments: 64,
+        mesh: null,
+        ring: {
+          innerRadius: 7500 * 1.6,
+          outerRadius: 7500 * 2.5,
+          inclination: (Math.PI / 12), // not too much, otherwise doesn't look nice
+          texture: 'images/texture_saturn_ring.png',
+          mesh: null
+        },
+        moons : [
+          {
+            name: 'Titan',
+            radius: (5150 / 2) * 0.3, // actually (5150 / 2) km
+            distaneFromPlanetAU: (1221870 / 149597871) * 250,  // Too close, 250 is exaggeration factor
+            orbitalPeriodEY: (16 / lEarthDaysPerYear) * 10, //Too fast, 50 is slowdown factor
+            rotationPeriodEY: 0.1,
+            //texture: 'images/texture_moon.jpg',
+            segments: 32,
+            mesh: null
+          },
+          {
+            name: 'Rhea',
+            radius: (1527 / 2) * 0.3, // actually (1527 / 2) km
+            distaneFromPlanetAU: (527108 / 149597871) * 250,  // Too close, 250 is exaggeration factor
+            orbitalPeriodEY: (4.5 / lEarthDaysPerYear) * 10, //Too fast, 50 is slowdown factor
+            rotationPeriodEY: 0.1,
+            //texture: 'images/texture_moon.jpg',
+            segments: 16,
+            mesh: null
+          }
+          /*
+          //Too far away
+          {
+            name: 'Iapetus',
+            radius: (1470 / 2) * 0.3, // actually (1470 / 2) km
+            distaneFromPlanetAU: (3560820 / 149597871) * 250,  // Too close, 250 is exaggeration factor
+            orbitalPeriodEY: (79 / lEarthDaysPerYear) * 10, //Too fast, 50 is slowdown factor
+            rotationPeriodEY: 0.1,
+            //texture: 'images/texture_moon.jpg',
+            segments: 16,
+            mesh: null
+          }
+          */
+        ]
+      },
+      {
+        name: 'Uranus',
+        radius: 8000, // actually 4.01 Earth radii
+        solarDistanceAU: 19.20,
+        orbitalPeriodEY: 83.7,
+        rotationPeriodEY: (-0.720 / lEarthDaysPerYear) * 100, //Too fast, 100 is slowdown factor
+        texture: 'images/texture_uranus.jpg',
+        segments: 64,
+        mesh: null,
+        ring: {
+          innerRadius: 8000 * 2.0,
+          outerRadius: 8000 * 2.01,
+          inclination: (Math.PI / 2),
+          //texture: 'images/texture_uranus_ring.png',
+          mesh: null
+        },
+        moons : [
+        
+        ]
+      },
+      {
+        name: 'Neptune',
+        radius: 8000, // actually 3.88 Earth radii
+        solarDistanceAU: 30.05,
+        orbitalPeriodEY: 163.7,
+        rotationPeriodEY: (0.673 / lEarthDaysPerYear) * 100, //Too fast, 100 is slowdown factor,
+        texture: 'images/texture_neptune.jpg',
+        segments: 64,
+        mesh: null,
+        moons : [
+        
+        ]
+      }
+    ];
+
+    var surfaceGraph = null;
+    var sunMesh = null;
+    
+    var focusableObjects = [];
+    var focusPlanet = null;
+    var infoFDistance = 14; // (bad method) for correcting info text position in relation to object distance
+
+    
+    var clock = new THREE.Clock();
+
+    var lastMs = Date.now();
+    var toastCountDownMs = 0;
+    var toastQueue = [];
+    
+    var setOrientationControlsDone = false;
+    
+    init();
+    render();
+
+    function init() {
+    
+      raycaster = new THREE.Raycaster();
+      
+      renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
+      renderer.setClearColor( 0x000000, 0 );
+      divwebgl = document.getElementById('webgl');
+      divwebgl.appendChild(renderer.domElement);
+      
+      container = document.getElementById('container');
+      leftcam = document.getElementById('leftcam');
+      rightcam = document.getElementById('rightcam');
+      toppanel = document.getElementById('toppanel');
+      bottompanel = document.getElementById('bottompanel');
+      toastleft = document.getElementById('toastleft');
+      toastright = document.getElementById('toastright');
+      infoleft = document.getElementById('infoleft');
+      inforight = document.getElementById('inforight');
+      complexityzonelinkleft = document.getElementById('complexityzonelinkleft');
+      complexityzonelinkright = document.getElementById('complexityzonelinkright');      
+      
+      centerline = document.getElementById('centerline');
+      lefteyetopcorner = document.getElementById('lefteyetopcorner');
+      righteyetopcorner = document.getElementById('righteyetopcorner');
+      lefteyebottomcorner = document.getElementById('lefteyebottomcorner');
+      righteyebottomcorner = document.getElementById('righteyebottomcorner');
+
+      leftCamCanvas = document.getElementById("leftcam");
+      leftCamContext = leftCamCanvas.getContext("2d");
+      rightCamCanvas = document.getElementById("rightcam");
+      rightCamContext = rightCamCanvas.getContext("2d");
+      video = document.getElementById("video");
+
+      cameraImage = document.createElement('canvas');
+      cameraImage.setAttribute("width", "640");
+      cameraImage.setAttribute("height", "480");
+      cameraImage.width = 640;
+      cameraImage.height = 480;
+      cameraImageContext = cameraImage.getContext("2d");
+      
+      effect = new THREE.StereoEffect(renderer);
+
+      scene = new THREE.Scene();
+
+      camera = new THREE.PerspectiveCamera(40, 1, 10, 10000000);
+      camera.position.set(0, 1850, 0);
+      camera.up = new THREE.Vector3(0, 1, 0);
+      scene.add(camera);
+
+      // Place us somewhere between Mars and Jupiter, from above
+      var orrerySunPosition = {
+        x: 0, // forward
+        y: -20000, // up. 
+        z: 60000 // right
+      };
+      
+      var lCenter =  new THREE.Vector3(orrerySunPosition.x, orrerySunPosition.y, orrerySunPosition.z);
+      // Don't orbit around Sun. Look around from camera's position instead.
+      lCenter.set(
+        camera.position.x,
+        camera.position.y - 0.2,
+        camera.position.z + 0.6
+      );
+      // Default PC controls when no deviceorientation.
+      controls = new THREE.navigateControl(camera, renderer.domElement, lCenter);
+      
+      function setOrientationControls(e) {
+        if (!e.alpha) {
+          return;
+        }
+        if (!setOrientationControlsDone) {
+          setOrientationControlsDone = true;
+
+          camera.position.set(0, 1850, 0);
+
+          controls = new THREE.DeviceOrientationControls(camera, true);
+          controls.connect();
+          controls.update();
+
+          container.addEventListener('click', function() { fullscreen(container); fullScreenRequested = true; }, false);
+
+          window.removeEventListener('deviceorientation', setOrientationControls);
+        }
+      }
+      if (window.DeviceOrientationEvent) {
+        window.addEventListener('deviceorientation', setOrientationControls, true);
+      }
+
+      var light;
+
+      light = new THREE.AmbientLight( 0x444444 );
+      scene.add(light);
+
+      light = new THREE.PointLight(0xffffff, 0.90);
+      light.position.set(orrerySunPosition.x, orrerySunPosition.y, orrerySunPosition.z);
+      scene.add(light);
+
+      var hideCam = false;
+      if (hideCam) {
+        var spaceGeometry = new THREE.SphereGeometry(1000000, 128, 128);
+        var spaceMaterial = new THREE.MeshBasicMaterial({color: 0x000000});
+        spaceMaterial.side = THREE.DoubleSide;
+        var spaceMesh = new THREE.Mesh(spaceGeometry, spaceMaterial);
+        scene.add(spaceMesh);
+      }
+
+      var sunRadius = 6000;
+      var sunGeometry = new THREE.SphereGeometry(sunRadius, 48, 48);
+      var sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      sunMaterial.map = THREE.ImageUtils.loadTexture('images/texture_sun.jpg');
+      sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
+      sunMesh.position.x = orrerySunPosition.x; // forward
+      sunMesh.position.y = orrerySunPosition.y; // up
+      sunMesh.position.z = orrerySunPosition.z; // right
+      scene.add(sunMesh);
+      sunMesh.solarSystemData = {
+        name: 'The Sun',
+        radius: sunRadius
+      };
+      focusableObjects.push(sunMesh);
+      
+      for (var pi = 0; pi < planets.length; pi++) {
+        var planet = planets[pi];
+        var pGeometry = new THREE.SphereGeometry(planet.radius, planet.segments, planet.segments);
+        var pMaterial = new THREE.MeshPhongMaterial();
+        pMaterial.map = THREE.ImageUtils.loadTexture(planet.texture);
+        planet.mesh = new THREE.Mesh(pGeometry, pMaterial);
+        planet.mesh.position.y = sunMesh.position.y;
+        scene.add(planet.mesh);
+        planet.mesh.solarSystemData = planet;
+        focusableObjects.push(planet.mesh);
+        if (planet.ring) {
+          var pRingGeometry = new THREE.RingGeometry( planet.ring.innerRadius, planet.ring.outerRadius, 64, 5, 0, 2 * Math.PI );
+          var pRingMaterial;
+          if (planet.ring.texture && (planet.ring.texture != '')) {
+            pRingMaterial = new THREE.MeshPhongMaterial({
+              color: 0x222222,
+              //shininess: 20,
+              //shading: THREE.FlatShading,
+              side: THREE.DoubleSide
+            });
+            pRingMaterial.map = THREE.ImageUtils.loadTexture(planet.ring.texture);
+          } else {
+            pRingMaterial = new THREE.MeshBasicMaterial({
+              color: 0x222222
+            });
+          }
+          planet.ring.mesh = new THREE.Mesh( pRingGeometry, pRingMaterial );
+          planet.ring.mesh.position.y = sunMesh.position.y;
+          planet.ring.mesh.rotation.x = (Math.PI / 2) + planet.ring.inclination;
+          planet.ring.mesh.rotation.z = (Math.PI / 4);
+          scene.add(planet.ring.mesh);
+        }
+        if (planet.moons) {
+          for (var mi = 0; mi < planet.moons.length; mi++) {
+            var moon = planet.moons[mi];
+            var mGeometry = new THREE.SphereGeometry(moon.radius, moon.segments, moon.segments);
+            var mMaterial;
+            if (moon.texture && (moon.texture != '')) {
+              mMaterial = new THREE.MeshPhongMaterial();
+              mMaterial.map = THREE.ImageUtils.loadTexture(moon.texture);
+            } else {
+              mMaterial = new THREE.MeshBasicMaterial({
+                color: 0x333333
+              });
+            }
+            moon.mesh = new THREE.Mesh(mGeometry, mMaterial);
+            moon.mesh.position.y = planet.mesh.position.y;
+            scene.add(moon.mesh);
+          }
+        }
+      }
+      
+      window.addEventListener('resize', resize, false);
+      resize();
+    }
+
+    function resize() {
+      screenWidth = container.offsetWidth; //window.innerWidth;
+      screenHeight = container.offsetHeight; //window.innerHeight;
+      screenHalfWidth = ((screenWidth / 2) | 0);
+      screenHalfHeight = ((screenHeight / 2) | 0);
+      var horizontalMargin = 0;
+      // adjust margin so that we have a near 4:3 ratio.
+      verticalMargin = (((screenHeight - (screenHalfWidth / (4/3))) / 2) * 0.5) | 0;
+
+      camera.aspect = screenHalfWidth / (screenHeight - (2 * verticalMargin));
+      camera.updateProjectionMatrix();
+
+      renderer.setSize(screenWidth, (screenHeight - (2 * verticalMargin))); // the total space for the viewport
+      effect.setSizeSingleView(screenHalfWidth, (screenHeight - (2 * verticalMargin)));
+
+      var cameraImageWidth = 800; //(screenHalfWidth - (2 * horizontalMargin));
+      var cameraImageHeight = 600; //(screenHeight - (2 * verticalMargin));
+      
+      cameraImage.width = cameraImageWidth;
+      cameraImage.height = cameraImageHeight;
+      cameraImage.setAttribute("width", '' + cameraImageWidth);
+      cameraImage.setAttribute("height", '' + cameraImageHeight);
+      cameraImage.style.width = cameraImageWidth + 'px';
+      cameraImage.style.height = cameraImageHeight + 'px';
+      
+      leftcam.style.left = horizontalMargin + 'px';
+      leftcam.style.top = verticalMargin + 'px';
+      leftcam.width = (screenHalfWidth - (2 * horizontalMargin));
+      leftcam.height = (screenHeight - (2 * verticalMargin));
+      leftcam.style.width = (screenHalfWidth - (2 * horizontalMargin)) + 'px';
+      leftcam.style.height = (screenHeight - (2 * verticalMargin)) + 'px';
+      
+      rightcam.style.left = (screenHalfWidth + horizontalMargin) + 'px';
+      rightcam.style.top = verticalMargin + 'px';
+      rightcam.width = (screenHalfWidth - (2 * horizontalMargin));
+      rightcam.height = (screenHeight - (2 * verticalMargin));
+      rightcam.style.width = (screenHalfWidth - (2 * horizontalMargin)) + 'px';
+      rightcam.style.height = (screenHeight - (2 * verticalMargin)) + 'px';
+      
+      divwebgl.style.left = 0 + 'px';
+      divwebgl.style.top = verticalMargin + 'px';
+      divwebgl.style.width = screenWidth + 'px';
+      divwebgl.style.height = (screenHeight - (2 * verticalMargin)) + 'px';
+      
+      toppanel.style.width = screenWidth + 'px';
+      toppanel.style.height = verticalMargin + 'px';
+
+      bottompanel.style.top = (screenHeight - verticalMargin) + 'px';
+      bottompanel.style.width = screenWidth + 'px';
+      bottompanel.style.height = verticalMargin + 'px';
+      
+      var lToastViewLeft = ((screenHalfWidth * 1) / 10);
+      var lToastViewTop = (((screenHeight - (2 * verticalMargin)) * 1) / 10);
+      var lToastViewWidth = ((screenHalfWidth * 4) / 10);
+      var lToastViewHeight = (((screenHeight - (2 * verticalMargin)) * 3) / 10);
+      toastleft.style.left = ((lToastViewLeft + 14) | 0) + 'px'; // 14 for making toast appear near.
+      toastleft.style.top = (verticalMargin + (lToastViewTop | 0)) + 'px';
+      toastleft.style.width = (lToastViewWidth | 0) + 'px';
+      toastleft.style.height = (lToastViewHeight | 0) + 'px';
+      if (isMobile) {
+        toastleft.style.fontSize = '11px';
+      }
+
+      toastright.style.left = (screenHalfWidth + ((lToastViewLeft - 14) | 0)) + 'px'; // -14 for making toast appear near.
+      toastright.style.top = (verticalMargin + (lToastViewTop | 0)) + 'px';
+      toastright.style.width = (lToastViewWidth | 0) + 'px';
+      toastright.style.height = (lToastViewHeight | 0) + 'px';
+      if (isMobile) {
+        toastright.style.fontSize = '11px';
+      }
+      
+      infoleft.style.left = ((((screenHalfWidth / 2) | 0) - 50) + infoFDistance) + 'px';
+      infoleft.style.top = ((verticalMargin + (((screenHeight - (2 * verticalMargin)) / 2) | 0)) - 10) + 'px';
+      
+      inforight.style.left = (screenHalfWidth + ((((screenHalfWidth / 2) | 0) - 50) - infoFDistance)) + 'px';
+      inforight.style.top = ((verticalMargin + (((screenHeight - (2 * verticalMargin)) / 2) | 0)) - 10) + 'px';
+
+      complexityzonelinkleft.style.left = ((((screenHalfWidth / 2) | 0) - 100) + 14) + 'px';
+      complexityzonelinkleft.style.top = ((screenHeight /*- verticalMargin*/) - 30) + 'px';
+      
+      complexityzonelinkright.style.left = (screenHalfWidth + ((((screenHalfWidth / 2) | 0) - 100) - 14)) + 'px';
+      complexityzonelinkright.style.top = ((screenHeight /*- verticalMargin*/) - 30) + 'px';
+      
+      
+      centerline.style.left = (screenHalfWidth - 1) + 'px';
+      centerline.style.top = verticalMargin + 'px';
+      centerline.style.height = (screenHeight - (2 * verticalMargin)) + 'px';
+      
+      lefteyetopcorner.style.left = (screenHalfWidth - 100) + 'px';
+      lefteyetopcorner.style.top = verticalMargin + 'px';
+
+      righteyetopcorner.style.left = screenHalfWidth + 'px';
+      righteyetopcorner.style.top = verticalMargin + 'px';
+      
+      lefteyebottomcorner.style.left = (screenHalfWidth - 100) + 'px';
+      lefteyebottomcorner.style.top = ((screenHeight - verticalMargin) - 100) + 'px';
+      
+      righteyebottomcorner.style.left = screenHalfWidth + 'px';
+      righteyebottomcorner.style.top = ((screenHeight - verticalMargin) - 100) + 'px';
+
+    }
+
+    function toast(toastMessage) {
+      toastQueue.push(toastMessage);
+    }
+    
+    function toastRun(deltaMS) {
+      if (toastCountDownMs > 0) {
+        if (deltaMS >= toastCountDownMs) {
+          toastCountDownMs = 0;
+          if (toastQueue.length == 0) {
+            toastleft.style.visibility = 'hidden';
+            toastright.style.visibility = 'hidden';
+          }
+        } else {
+          toastCountDownMs -= deltaMS;
+        }
+      } else if (toastQueue.length > 0) {
+        var toastMessage = toastQueue.splice(0, 1);
+        if (toastMessage || (toastMessage != '')) {
+          toastleft.innerHTML = toastMessage;
+          toastright.innerHTML = toastMessage;
+          toastleft.style.visibility = 'visible';
+          toastright.style.visibility = 'visible';
+          toastCountDownMs = 3000;
+        }
+      }
+    }
+
+    function infoShow(infoMessage) {
+      infoleft.style.left = ((((screenHalfWidth / 2) | 0) - 50) + infoFDistance) + 'px';
+      inforight.style.left = (screenHalfWidth + ((((screenHalfWidth / 2) | 0) - 50) - infoFDistance)) + 'px';
+      infoleft.innerHTML = infoMessage;
+      inforight.innerHTML = infoMessage;
+      infoleft.style.visibility = 'visible';
+      inforight.style.visibility = 'visible';
+    }
+
+    function infoHide() {
+      infoleft.style.visibility = 'hidden';
+      inforight.style.visibility = 'hidden';
+    }
+
+    var renderState = 0;
+    var planetProjectVector = new THREE.Vector3();
+    var screenCenterVector = new THREE.Vector2(0, 0);
+    
+    function render() {
+      requestAnimationFrame(render);
+
+      camera.updateProjectionMatrix();
+      controls.update(clock.getDelta());
+
+      effect.render(scene, camera);
+      
+      var nowMs = Date.now();
+      var deltaMs = (nowMs - lastMs);
+      lastMs = nowMs;
+
+      toastRun(deltaMs);
+      
+      var lTimeSec = clock.getElapsedTime();
+
+      sunMesh.rotation.y += 0.003;
+
+      var lEarthSunPeriodSec = 20;
+      
+      var lEarthOrbitNorm = (lTimeSec / lEarthSunPeriodSec);
+      
+      renderState++;
+      if (renderState == 1) {
+        // only determine focus 50% of time
+        var focusPlanetPrev = focusPlanet;
+        var focusPlanetNew = null;
+        var useProjectMethod = true;
+        if (useProjectMethod) { // project method
+          for (var pi = 0; pi < focusableObjects.length; pi++) {
+            var planet = focusableObjects[pi];
+            planetProjectVector.copy(planet.position);
+            planetProjectVector.project(camera);
+            if (screenCenterVector.distanceTo(planetProjectVector) < 0.1) {
+              focusPlanetNew = planet;
+              break;
+            }
+          }
+        } else { // unproject method
+          var vector = new THREE.Vector3();
+          var focusX = 0.5; // center of screen
+          var focusY = 0.5; // center of screen
+          vector.set( ( focusX ) * 2 - 1, - ( focusY ) * 2 + 1, 0.5 );
+          vector.unproject( camera );
+          raycaster.ray.set( camera.position, vector.sub( camera.position ).normalize() );
+          var intersects = raycaster.intersectObjects( focusableObjects );
+          if ( intersects.length > 0 ) {
+            focusPlanetNew = intersects[0].object;
+          }
+        }
+        if (focusPlanetNew != null) {
+          focusPlanet = focusPlanetNew;
+          if (focusPlanet != focusPlanetPrev) {
+            // Some inverse relationship between (info box inter-eye distance) and ( distance from camera to position of planet minus radius)
+            // TODO: this sucks, bad approximation, mathematically incorrect, doesn't take care of screen resolution, etc.
+            infoFDistance = (1000000 / (camera.position.distanceTo( focusPlanet.position ) - focusPlanet.solarSystemData.radius)) | 0;
+            infoShow(focusPlanet.solarSystemData.name);
+          }
+        } else {
+          focusPlanet = null;
+          if (focusPlanet != focusPlanetPrev) {
+            infoHide();
+          }
+        }
+      }
+      else if (renderState > 1) {
+        renderState = 0;
+      }
+      camCapture();
+
+      TWEEN.update();
+    }
+
+    function fullscreen(el) {
+      if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement ) {
+        if (el.requestFullscreen) {
+          el.requestFullscreen();
+        } else if (el.msRequestFullscreen) {
+          el.msRequestFullscreen();
+        } else if (el.mozRequestFullScreen) {
+          el.mozRequestFullScreen();
+        } else if (el.webkitRequestFullscreen) {
+          el.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+        }
+      } else {
+        var toggle = false;
+        if (toggle) {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+        }
+      }
+    }
+
+    var camCaptureState = 0;
+    function camCapture() {
+      if (videoPlaying) {
+        cameraImageContext.drawImage(video, 0, 0, video.videoWidth, video.videoHeight, 0, 0, cameraImage.width, cameraImage.height);
+        leftCamContext.drawImage(cameraImage, 0, 0, cameraImage.width, cameraImage.height, 0, 0, leftcam.width, leftcam.height);
+        rightCamContext.drawImage(cameraImage, 0, 0, cameraImage.width, cameraImage.height, 0, 0, leftcam.width, leftcam.height);
+      }
+    }
+      
+    // If "guns don't kill people, people kill people", ...
+    // TODO: Better method for conditional sequential toasting.
+    
+    if (isMobile) {
+      toast('AR/VR Solar System for Google Cardboard'); 
+      toast('Get your Google Cardboard ready');
+      toast('Accept camera permission for AR mode');
+    } else {
+      toast(
+        'AR/VR Solar System for Google Cardboard<br />\n' +
+        '<br />\n' +
+        'Open this page on your phone and place your phone in Google Cardboard.'
+      ); 
+      toast(
+        'To use on your PC:<br />\n' +
+        '<br />' +
+        '<b><u>Controls</u></b><br />\n' +
+        'mouse drag: look around<br />\n' +
+        //'mouse wheel: zoom<br />\n' +
+        'cursor keys: move<br />\n' +
+        'R/F keys: up/down<br />\n'
+      ); 
+    }
+    
+    window.addEventListener("DOMContentLoaded", function() {
+	    var getUserMedia = navigator.getUserMedia ? function(a, b, c) { navigator.getUserMedia(a, b, c); } : (navigator.webkitGetUserMedia ? function(a, b, c) { navigator.webkitGetUserMedia(a, b, c); } : null);
+      if (getUserMedia == null) {
+	alert("getUserMedia == null");
+      }
+      if (getUserMedia != null) {
+        MediaStreamTrack.getSources(function(sourceInfos) {
+          var videoSource = null;
+          // Select the rear camera. We are assuming it is the last one.
+          // TODO: assumption is the mother of all...
+          for (var i = 0; i < sourceInfos.length; i++) {
+            var sourceInfo = sourceInfos[i];
+            //console.log('source: ', sourceInfo);
+            if (sourceInfo.kind === 'video') {
+              //console.log(sourceInfo.id, sourceInfo.label || 'camera');
+              videoSource = sourceInfo.id;
+              //break; // uncomment for selecting the first one.
+            }
+          }
+
+          if (videoSource != null)
+          {
+            getUserMedia.call(this,
+              { 
+                video: {
+                  optional: [
+                    { sourceId: videoSource },
+                    { minWidth: 640 },
+                    { maxWidth: 640 },
+                    { minHeight: 480 },
+                    { maxHeight: 480 }
+                  ]
+                },
+                //video: true, 
+                audio: false 
+              }, 
+              function(stream){
+                video.src = window.webkitURL.createObjectURL(stream);
+                video.play();
+                
+                videoPlaying = true;
+                toast('Video setup ok');
+                if (isMobile) {
+                  if (!fullScreenRequested) {
+                    toast('Tap screen for full screen mode');
+                  }
+                }
+                toast('Please wait while textures load 3');
+                if (isMobile) {
+                  toast('Tip: increase your phone\'s display sleep timeout');
+                }
+              }, 
+              function(error) {
+                videoPlaying = false;
+                toast("Video capture disabled"); 
+                if (isMobile) {
+                  if (!fullScreenRequested) {
+                    toast('Tap screen for full screen mode');
+                  }
+                }
+                toast('Please wait while textures load 4');
+                if (isMobile) {
+                  toast('Tip: increase your phone\'s display sleep timeout');
+                }
+              }
+            );
+          } else {
+            toast("Video capture not available"); 
+            if (isMobile) {
+              if (!fullScreenRequested) {
+                toast('Tap screen for full screen mode');
+              }
+            }
+            toast('Please wait while textures load 5');
+            if (isMobile) {
+              toast('Tip: increase your phone\'s display sleep timeout');
+            }
+          }
+        });
+      } else {
+        toast("HTML5 video not supported"); 
+        if (isMobile) {
+          toast('Tap screen for full screen mode');
+        }
+        toast('Please wait while textures load 6');
+        if (isMobile) {
+          toast('Tip: increase your phone\'s display sleep timeout');
+        }
+      }
+
+    });
+    
+
+    
+  </script>
+  
+
+</body></html>
